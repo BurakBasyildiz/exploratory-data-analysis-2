@@ -1,0 +1,114 @@
+#R'deki Boston verisini kullanarak keşifsel veri analizi yapacağım.
+data(Boston)
+head(Boston)
+
+names(Boston)
+str(Boston)
+summary(Boston)
+
+boston_df <- as.data.frame(Boston)
+head(boston_df)
+
+#-Faktörel ve sayısal değişkene dönüştürme
+#chas kategorik değişken olduğundan diğerlerini numeric olarak atayacağız.
+
+boston_df$chas <- as.factor(boston_df$chas) 
+
+numeric_columns <- colnames(boston_df)[!colnames(boston_df) %in% "chas"]
+boston_df[numeric_columns] <- lapply(boston_df[numeric_columns], as.numeric)
+
+str(boston_df)
+
+#-Eksik verilerin tespiti
+
+boston_df_ev <- sapply(boston_df, function(x) sum(is.na(x)))
+print(boston_df_ev)
+
+#medv değişkenindeki eksik verileri tespit edelim.
+is_na_medv <- is.na(boston_df$medv)
+is_na_medv  #Eksik veri olmadığını görüyoruz.
+
+#Örneğin 24 değerini NA ile değiştirelim
+boston_df$medv[boston_df$medv == 24] <- NA
+boston_df$medv
+
+#Eksik verileri mean ile doldurma
+mean_df_medv <-mean(boston_df$medv, na.rm = TRUE)
+
+boston_df$medv[is.na(boston_df$medv)] <- mean_df_medv
+print(boston_df)
+
+#Örneğin 22 değerini NA ile değiştirelim
+# medv değişkenindeki NA değerlerini medyanla doldur
+boston_df$medv[boston_df$medv == 22] <- NA
+boston_df$medv
+
+median_df_mdv <- median(boston_df$medv, na.rm = TRUE) # medv değişkeninin medyanını al
+
+boston_df$medv[is.na(boston_df$medv)] <- median_df_mdv  # NA değerlerini medyan ile doldur
+
+print(boston_df)
+
+#Aykırı değerlerin tespiti
+#rm değişkeninin aykırı değerlerini tespit edelim.
+data<-boston_df$rm
+head(data)
+boxplot(data)
+sort(data)
+
+# Z-puanı hesaplama
+z_scores <- scale(data)
+z_scores #bazı z değerleri 3'ten büyüktür.Aşağıdaki outliers'ta true gelen değerler olacaktır.
+# Aykırı değerleri belirleme
+outliers <- abs(z_scores) > 3
+outliers
+
+#---
+#dağılımları keşif
+# Örnek veri setini oluşturma
+mydata<-boston_df$indus
+mydata
+# Histogram oluşturma
+hist(mydata)
+
+# Kutu grafiği oluşturma
+boxplot(mydata)
+
+# Q-Q plot oluşturma
+qqnorm(mydata)
+qqline(mydata)
+
+# Kantillerden yararlanma
+summary(mydata)
+
+
+# Korelasyon katsayısını hesaplama
+correlation <- cor(boston_df$lstat, boston_df$medv)
+print(correlation)
+#Boston verisindeki LSTAT(Düşük sosyo-ekonomik statüdeki nüfus yüzdesi) değişkeni ile 
+#bağımlı değişken olan MEDV (1000 dolarlık ortanca ev fiyatı) bağımlı değişkeni arasında 0,73'lük bir korelasyon vardır.
+
+
+#multicollinearity
+
+#doğrusal regresron modeli
+model <- lm(boston_df$medv ~ boston_df$lstat + boston_df$crim + boston_df$indus)
+summary(model)#LSTAT Düşük sosyo-ekonomik statüdeki nüfus yüzdesi bağımsız değişkeninin,
+#MEDV (1000 dolarlık ortanca ev fiyatı) bağımlı değişkenini anlamlı bir şekilde yordadığını görüyoruz.
+
+# Bağımsız değişkenler arasındaki korelasyonu hesaplama
+
+# "medv" ve "CHAS" sütunlarını çıkararak numeric bağımsız değişkenleri seçmemiz gerekir
+numeric_independent_vars <- boston_df[, sapply(boston_df, is.numeric) & !colnames(boston_df) %in% c("medv", "CHAS")]
+
+# Korelasyon matrisini hesaplarız
+correlation_matrix <- cor(numeric_independent_vars)
+
+# Korelasyon matrisini görselleştiririz
+library(corrplot)
+corrplot(correlation_matrix, method = "color")
+
+
+#Veri standartlaştırma
+standardized_data <- scale(boston_df[, sapply(boston_df, is.numeric)])
+summary(standardized_data)
